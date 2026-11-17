@@ -17,6 +17,7 @@ import { copyFileSync, existsSync, mkdirSync, readFileSync, readdirSync, statSyn
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { boardIssue, buildRadar, dataScript, parseSnapshot } from './lib/model.ts';
+import { formatReport, runAudit } from './lib/audit.ts';
 import { buildDossier } from './vendor/makefun-board.ts';
 
 const here = fileURLToPath(new URL('.', import.meta.url));
@@ -41,6 +42,17 @@ if (!existsSync(inputFile)) {
   process.exit(2);
 }
 const out = arg('output', process.env.MAKEFUN_OUTPUT_DIR ?? '/output');
+
+if (process.argv.includes('--audit')) {
+  const boardFile = join(out, 'board.json');
+  if (!existsSync(boardFile)) {
+    process.stderr.write(`token radar: no board at ${boardFile}: build the board first, then audit it\n`);
+    process.exit(2);
+  }
+  const audit = runAudit(boardFile, inputFile);
+  process.stdout.write(`${formatReport(audit)}\n`);
+  process.exit(audit.ok ? 0 : 1);
+}
 
 const snapshot = parseSnapshot(readFileSync(inputFile, 'utf8'));
 const { board, radar } = buildRadar(snapshot);
